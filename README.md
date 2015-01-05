@@ -1,0 +1,1 @@
+This is a new branch for the git since I couldn't figure out what was going wrong in the old one. I intend that we can all make our own branches so that we don't accidently delete pushes.            
