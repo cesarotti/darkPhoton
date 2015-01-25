@@ -1,0 +1,328 @@
+#include "TTree.h"
+#include "TFile.h"
+#include "TH1.h"
+#include "TCanvas.h"
+#include "TMath.h"
+#include "TRandom3.h"
+#include <iostream>
+#include <sstream>
+#include <map>
+#include <algorithm>
+
+
+/* 
+   Program Created 1/19/15
+   
+   This program is used for testing the energy resolution of 
+   the depth first search
+   The detector used is the square annulus with 1225 'crystals'
+   The program that created this data is in the darkPhoton
+   folder
+
+*/
+
+vector<vector<pair<int, double> > >::iterator vv_iter;
+vector<pair<int, double> >::iterator v_iter;
+
+const double CRYSTOMM = 50.;
+const double XPOS = 13.; //in xtal units
+const double YPOS = 0.; //in xtal units
+
+
+//Changes x and y coordinates in crystal units to the crystal 
+//number
+int CoordtoID(int x, int y)
+{
+  return(y+17)*35+(x+17);
+}
+
+
+// Gets X position (in crystal units) from crystalID
+int IDtoX(int crystalID)
+{
+  return crystalID%35-17;
+}
+
+
+//Gets y position (in crystal units) from crystalID
+int IDtoY(int crystalID)
+{
+  return crystalID/35-17;
+}
+
+
+//defines new comparison to check energies of crystal pairs
+bool pairCompare(const pair<int, double>& firstElem, const pair<int, double>& secondElem)
+{return firstElem.second > secondElem.second;}
+
+
+//Returns number of crystals to include in cluster based off of a simple heuristic
+int crystalNumOptimized(vector<pair<int, double> > *shower)
+{
+  double energySum(0.);
+  double next(0.); 
+  int n(0);
+  
+  vector<pair<int, double> >::iterator a; 
+  for (a=shower->begin(); a!=shower->end(); ++a)
+    {
+      //first iteration
+      if (n<1) {n++; energySum+= a->second;}
+
+      else
+	{
+	  next=a->second; 
+	  if (next/(energySum+next) < .5/next)
+	    {return n;}
+	  else {
+	      energySum+= next;
+	      n++;
+	    }
+	}
+    }
+  return n;
+}
+
+
+//Returns the total energy in all crystals of a shower
+double clusterDep(vector<pair<int, double> > *shower)
+{
+  double totEnergy(0.);
+  for (v_iter=shower->begin(); v_iter!=shower->end(); v_iter++)
+    {totEnergy+= v_iter->second;}
+  return totEnergy;
+}
+
+	  
+
+//finds if a vector is in a vector of vectors
+//because C++ is nonsense.
+bool findVector (vector<vector<pair<int, double> > > *detector,
+		vector<pair<int, double> > shower)
+{
+  vector<vector<pair<int, double> > >::iterator a; 
+  for (a=detector->begin(); a!=detector->end(); ++a)
+    { 
+        if ((a->front()).first==(shower.front()).first) return true;
+    }
+      return false;
+}
+
+
+//Reconstructs the photon from the cluster data, output is in MeV and mm
+pair<double, pair<double, double> > reconstruct(vector<pair<int, double> > shower)
+{
+  double energy(0.), xPos(0.), yPos(0.);
+  
+  //COM energy and position
+  for (v_iter=shower.begin(); v_iter!=shower.end(); ++v_iter)
+    { energy += v_iter->second;
+      xPos+=IDtoX(v_iter->first)*v_iter->second;
+      yPos+=IDtoY(v_iter->first)*v_iter->second;
+    }
+ 
+  xPos/=energy; yPos/=energy;
+  pair<double, double> position(xPos*CRYSTOMM, yPos*CRYSTOMM);
+  pair<double, pair<double, double> > photon(energy, position);
+  return photon;
+}
+
+
+
+//Checks if the 2nd  crystal is directly N, E, W, or S of another
+bool isNgbr(int crysID1, int crysID2)
+{
+  if (std::abs(CoordtoID(IDtoX(crysID1)+1, IDtoY(crysID1))-crysID2) < 1) {return true;}
+  if (std::abs(CoordtoID(IDtoX(crysID1)-1, IDtoY(crysID1))-crysID2) < 1) {return true;}
+  if (std::abs(CoordtoID(IDtoX(crysID1), IDtoY(crysID1)+1)-crysID2) < 1) {return true;}
+  if (std::abs(CoordtoID(IDtoX(crysID1), IDtoY(crysID1)-1)-crysID2) < 1) {return true;}
+  return false;
+}
+
+
+//method to find if a crystal is a local max in energy deposition
+bool localMax(pair<int, double> xtal, double addresses[])
+{ 
+  for (int x=-1; x<2; x++) {
+    for (int y=-1; y<2; y++) {
+      if (xtal.second < addresses[CoordtoID(IDtoX(xtal.first)+x, IDtoY(xtal.first)+y)]) {return false;}
+    }
+  }
+  return true;    
+}
+
+
+//Sorts a shower into the most to least energetic crystals
+vector<pair<int, double> > *  energySort(vector<pair<int, double> > *shower)
+{
+  std::sort(shower->begin(), shower->end(), pairCompare);
+  return shower;
+}
+
+
+
+//Depth first search starting at most energetic crystal
+vector<pair<int, double> > * DFS(pair<int, double> start, double energyThreshLo, vector<pair<int, double> > * shower, double address[])
+{
+  shower->push_back(start);
+  for (int x=-1; x<2; x++) {
+    for (int y=-1; y<2; y++) {
+      int ngbrID = CoordtoID(IDtoX(start.first)+x, IDtoY(start.first)+y);
+      double ngbrEn = address[ngbrID];
+      pair<int, double> ngbr(ngbrID, ngbrEn);
+      if (ngbrEn>energyThreshLo)
+	{
+	  vector<int> showerID;
+	  //check if already counted
+	  for (int f=0; f<(int)shower->size(); f++) {showerID.push_back(((*shower)[f]).first);}
+	  if (std::find(showerID.begin(), showerID.end(), ngbrID)!=showerID.end())
+		{continue;}
+	    //recursion
+	      else  {shower = DFS(ngbr, energyThreshLo, shower, address); }
+	}
+    }
+  }
+    shower = energySort(shower);
+    return shower;
+}
+
+
+
+
+
+void resoTest(double noiseLevel, int crysNum)
+{
+  cout << "Starting..." << endl;
+
+  TRandom3* rand = new TRandom3(12191982);
+  
+  TFile* file = new TFile("complete.root");
+
+  TTree* tree = (TTree *)file->Get("Signal");
+
+
+  int nEvents = tree->GetEntries();
+
+  double addresses[1225] = {};
+  for (int k=0; k<1225; k++) {
+    std::stringstream ss2;
+    ss2 << k;
+    string str = "Crystal_"+ss2.str();
+    const char* charstr = str.c_str();
+    tree->SetBranchAddress(charstr, &addresses[k]);
+  }
+
+  double energyThreshHi = 5.;
+  double energyThreshLo = 0.0;
+
+   TH1D* energyReso = new TH1D("energyReso", "Energy_resolution",  400, -350, 150);
+  TH1D* posResoX = new TH1D("posResoX", "XPosition_resolution", 80, -40, 39); 
+  TH1D* posResoY = new TH1D("posResoY", "YPosition_resolution", 80, -40, 39); 
+  TH1D* clusterSize = new TH1D("clusterSize", "Cluster_Sizes", 80, 0, 79);
+
+  double trueEnergy = 0.;
+
+  for (int i = 0; i < nEvents; i++)
+    {
+      tree->GetEntry(i);
+      vector<pair<int, double> > geant; 
+      vector<pair<int, double> > hitMap;
+
+      trueEnergy = 0.;
+
+      for (int w = 0; w<1225; w++)
+	{
+	  double noise = rand->Gaus(0, noiseLevel);
+	  pair<int, double> hit(w, addresses[w]+noise);
+	  geant.push_back(hit);
+	  if (addresses[w] > energyThreshHi)
+	    {hitMap.push_back(hit);}
+	  trueEnergy+= addresses[w];
+	}		    
+    
+
+      //Get a list of all local maxes in detector
+      vector<pair<int, double> > localMaxList;
+  
+      for (v_iter= hitMap.begin(); v_iter!=hitMap.end(); v_iter++)
+	{ if (localMax(*v_iter, addresses)) {localMaxList.push_back(*v_iter);}}
+
+
+      //Do a DFS about each local max
+      vector<vector<pair<int, double> > > clusters;
+      vector<vector<pair<int, double> > >::iterator clusterIter;
+
+      for (v_iter = localMaxList.begin(); v_iter!=localMaxList.end(); v_iter++)
+	{ 
+	  vector<pair<int, double> > shower;
+	  clusters.push_back(*DFS(*v_iter, 
+				  energyThreshLo, 
+				  &shower, 
+				  addresses));
+	}
+
+
+      //detector will have no duplicates
+      vector<vector<pair<int, double> > > detector;
+      
+      for (clusterIter=clusters.begin(); clusterIter!=clusters.end(); ++clusterIter)
+	{
+	  if (clusterIter==clusters.begin())
+	    {detector.push_back(*clusterIter);}
+	  
+	  else
+	    {
+	      if (!findVector(&detector, *clusterIter))
+		{detector.push_back(*clusterIter);}
+	      else {
+		if (!findVector(&detector, *clusterIter))
+		  {detector.push_back(*clusterIter);}
+	      }
+	    }
+	}
+      /*We're going to keep this simple and assume only one photon is in the 
+	detector. Obviously this will need to be adjusted in the future.
+      */
+
+
+      //ordered list of all photons
+      vector<vector<pair<int, double> > > ordered;
+
+      //Get the photons from the detector
+      for (vv_iter=detector.begin(); vv_iter!=detector.end(); vv_iter++)
+	{
+	  vector<pair<int, double> > shower = *vv_iter;
+	  int num = crysNum;
+	  clusterSize->Fill(shower.size());
+	  if ((double)shower.size()>num)
+	    {shower.erase(shower.begin()+num, shower.end());}
+	  ordered.push_back(shower);
+	}
+      
+      pair<double, pair<double, double> > photon;
+      for (vv_iter=ordered.begin(); vv_iter!=ordered.end(); vv_iter++)
+	{
+	  photon = reconstruct(*vv_iter);
+	  energyReso->Fill(photon.first-trueEnergy);
+	  posResoX->Fill(photon.second.first-XPOS*CRYSTOMM);
+	  posResoY->Fill(photon.second.second-YPOS*CRYSTOMM);
+	}
+	
+	}
+
+ energyReso->GetXaxis()->SetTitle("Energy Resolution:= (measrued-expected) in MeV");
+  posResoX->GetXaxis()->SetTitle("Position Resolution:=(measured-expected) in mm");
+  posResoY->GetXaxis()->SetTitle("Position Resolution:=(measured-expected) in mm");
+  
+
+  TCanvas* canvas = new TCanvas("canvas", "canvas", 1000, 500);
+  canvas->Divide(2,1);
+  //canvas->cd(1); posResoX->Draw();
+  //canvas->cd(2); posResoY->Draw();
+  canvas->cd(1); clusterSize->Draw();
+  canvas->cd(2); energyReso->Draw();
+
+
+  energyReso->Fit("gaus");
+
+    }

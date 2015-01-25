@@ -1,0 +1,37 @@
+#include "TTree.h"
+#include "TGraph.h"
+#include "TH1.h"
+#include "TCanvas.h"
+#include "TMath.h"
+#include "TRandom3.h"
+#include <iostream>
+#include <sstream> 
+
+void dfsPlots500()
+
+{
+  int n = 15;
+  double xtalNum[15] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25};
+  double reso500[15] = {19.79, 14.76, 12.29, 9.892, 8.357, 7.959, 6.848, 5.775, 4.845, 4.374, 2.539, 2.141, 3.176};
+  double reso500n1[15] = {20.20, 14.90, 11.89, 8.918, 8.429, 7.800, 6.643, 5.906, 5.341, 4.584, 2.427, 1.259, .952};
+  double reso500n3[15] = {19.95, 14.03, 11.36, 9.536, 8.437, 7.307, 6.509, 6.115, 5.422, 4.916, 3.151, 2.43, 2.181};
+
+  TGraph *gr500 = new TGraph (n, xtalNum, reso500);
+  TGraph *gr500n1 = new TGraph (n, xtalNum, reso500n1);
+  TGraph *gr500n3 = new TGraph (n, xtalNum, reso500n3);
+
+  TCanvas *canvas = new TCanvas ("canvas", "Energy Resolution v. Crystal Num", 1000, 500);
+  canvas->Divide(2, 2);
+  canvas->cd(1);
+  gr500n3->SetMarkerStyle(21); gr500n3->SetMarkerColor(55);
+  gr500n3->Draw("APL");
+  gr500n1->SetMarkerStyle(21); gr500n1->SetMarkerColor(13); gr500n1->Draw("PL");
+  gr500->SetMarkerStyle(21); gr500->SetMarkerColor(80); gr500->Draw("PL");
+
+  canvas->cd(2); gr500->SetTitle("No Noise"); gr500->Draw("APL");
+  canvas->cd(3); gr500n1->SetTitle("1 MeV Noise"); gr500n1->Draw("APL");
+  canvas->cd(4); gr500n3->SetTitle("3 MeV Noise"); gr500n3->Draw("APL");
+  
+  
+
+}
