@@ -1,0 +1,17 @@
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c      written by the UFO converter
+ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+darkphotoninputs 1 mdl_gedP
+
+darkphotoninputs 2 mdl_gdFdP
+
+sminputs 1 aEWM1
+
+mass 9000001 mdl_MdP
+
+mass 11 mdl_Me
+
+mass 9000002 mdl_MdF
+
+decay 9000001 mdl_WdP

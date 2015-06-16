@@ -1,0 +1,77 @@
+# This file was automatically created by FeynRules 2.0.30
+# Mathematica version: 8.0 for Microsoft Windows (64-bit) (October 6, 2011)
+# Date: Mon 13 Apr 2015 17:06:05
+
+
+# 
+# This is the logfile for the model DarkPhotonTest
+
+# Authors: N. Christensen, C. Duhr, B. Fuks
+# Model version: 1.4.5
+# Checking the Quantum numbers
+   * Electric charge defined.
+# Checking the Lagrangians
+   * All Lagrangians are ok.
+#
+# Particle definitions
+#
+
+   * No particles removed. All particles correspond to GenInt setup.
+
+# Automatically assigned PDG numbers
+   * Assigned PDG number 9000001 to particle dP
+   * Assigned PDG number 9000002 to particle dF-
+
+
+# Compulsory PDG codes:
+   * Class SM leptons incomplete. 13, 15 missing.
+   * Class SM neutrinos incomplete. 12, 14, 16 missing.
+   * Class SM quarks incomplete. 1, 2, 3, 4, 5, 6 missing.
+   * Class SM gauge bosons incomplete. 21, 23, 24 missing.
+#
+# Parameter definitions
+#
+
+   * All parameters are ok.
+
+
+# Vertices
+   * Calling FeynmanRules for 3 Lagrangians.
+   * Number of classes vertices: 3
+   * Number of flavored vertices: 3
+   * Saved vertices in InterfaceRun[ 1 ].
+   * Checked QNumber conservation.
+      - Quantum number LeptonNumber conserved in all vertices.
+      - Quantum number Q conserved in all vertices.
+   * particles.py written.
+   * parameters.py written.
+#
+# Vertex definitions
+#
+
+   * 3 vertices written.
+   * vertices.py written.
+#
+# Lorentz structure definitions
+#
+
+   * 1 lorentz structure written.
+   * lorentz.py written.
+#
+# Coupling definitions
+#
+
+   * 3 couplings written.
+   * couplings.py written.
+#
+# Coupling order definitions
+#
+
+   * 0 couplings orders written.
+   * coupling_orders.py written.
+#
+# Decay definitions
+#
+
+   * 1 decay written.
+   * decay.py not written
